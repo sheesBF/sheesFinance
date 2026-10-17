@@ -185,6 +185,12 @@ label.chk{flex-direction:row;align-items:center;gap:8px;font-size:14px;color:var
 .prow .pl b{display:block;font-weight:500}.prow .pl span{font-size:12.5px;color:var(--faint)}
 .prow .pr{display:flex;flex-direction:column;align-items:flex-end;gap:6px}.prow .pr b{font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap}
 .prow.tot{border-bottom:0;border-top:1px solid var(--ink)}
+.today{padding-block:24px 8px}
+.today .lbl{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);padding-bottom:6px;border-bottom:1px solid var(--ink)}
+.acctlist.big2 div{padding:13px 0;font-size:15px;border-bottom:1px solid var(--rule)}
+.acctlist.big2 b{font-size:22px;font-weight:400;letter-spacing:-.02em;text-align:right;display:flex;flex-direction:column;align-items:flex-end;line-height:1.15}
+.acctlist.big2 b .cur{display:block;text-align:right;margin-top:3px}
+.acctlist.big2 b small{display:block;font-size:11.5px;color:var(--faint);letter-spacing:0}
 h2.mhd{display:flex;justify-content:space-between;margin-top:48px}
 h2.mhd #mlabel{color:var(--ink)}
 @media (max-width:720px){
@@ -261,7 +267,7 @@ details.set .body{padding:0 0 20px;display:flex;flex-direction:column;gap:14px}
 
   <section id="tab-overview">
     <div class="dirty" id="backupNag" hidden style="position:static;margin-top:16px"><span>You have changes that are not backed up yet.</span><span class="actions"><button class="btn primary" data-act="backup">Download backup</button></span></div>
-    <div class="hero" id="today"></div>
+    <div class="today" id="today"></div>
     <h2>Coming up, next 14 days</h2>
     <ul class="due" id="upcoming"></ul>
     <h2 class="mhd"><span>Month view</span><span id="mlabel"></span></h2>
@@ -715,13 +721,11 @@ function renderToday(){
   const s = cfg.settings, td = todayISO(), b = balancesAt(cfg, entries, R, td);
   const rows = [["ENBD account","var(--s-uae)"],["India cash","var(--s-ind)"],["Mozambique cash","var(--s-moz)"],["USD cash","var(--s-usd)"]];
   const aed = k => b[k] / curRateUI(ACUR[k]);
-  const total = rows.reduce((a,[k]) => a + aed(k), 0), ppl = people(cfg, entries, R, nowIdx());
-  const owedMe = ppl.reduce((a,p)=>a+Math.max(0,p.owesMe),0), iOwe = ppl.reduce((a,p)=>a+Math.max(0,p.iOwe),0);
   const d = new Date(td + "T00:00:00Z");
-  $("#today").innerHTML = `<div><div class="lbl">Cash today · ${d.getUTCDate()} ${MON3[d.getUTCMonth()]} ${d.getUTCFullYear()}</div><div class="big">${fmt(total,"AED",0)}<span class="cur">AED</span></div>
-    <div class="delta">EI card owed AED ${fmt(b["EI card"],"AED",0)} · owed to you AED ${fmt(owedMe,"AED",0)}${iOwe > 0.5 ? ` · you owe AED ${fmt(iOwe,"AED",0)}` : ""}</div></div>
-    <div class="acctlist">${rows.map(([k,c]) => `<div><span><i class="d" style="background:${c}"></i>${k}</span><b class="${b[k] < -0.5 ? "neg" : ""}">${fmt(b[k],ACUR[k],0)} <span class="cur">${ACUR[k]}</span></b></div>`).join("")}
-    <div><span><i class="d" style="background:var(--ink)"></i>EI card owed</span><b>${fmt(b["EI card"],"AED",0)} <span class="cur">AED</span></b></div></div>`;
+  const avail = s.eilim - b["EI card"];
+  $("#today").innerHTML = `<div class="lbl">Balances \u00b7 ${d.getUTCDate()} ${MON3[d.getUTCMonth()]} ${d.getUTCFullYear()}</div>
+    <div class="acctlist big2">${rows.map(([k,c]) => `<div><span><i class="d" style="background:${c}"></i>${k}</span><b class="${b[k] < -0.5 ? "neg" : ""}">${fmt(b[k],ACUR[k],0)} <span class="cur">${ACUR[k]}</span></b></div>`).join("")}
+    <div><span><i class="d" style="background:var(--ink)"></i>EI card balance</span><b class="${avail < 2000 ? "neg" : ""}">${fmt(avail,"AED",0)} <span class="cur">AED</span><small>of ${fmt(s.eilim,"AED",0)} limit</small></b></div></div>`;
   const end = new Date(d.getTime() + 14 * 864e5).toISOString().slice(0,10);
   const up = scheduleEvents(cfg, R).filter(e => e.date > td && e.date <= end && e.label !== "Daily living").map(e => ({date:e.date, label:e.label, sub:e.acct, v:e.acct === "EI card" ? -e.v : e.v, cur:ACUR[e.acct], ei: e.acct === "EI card"}))
     .concat(entries.filter(e => e.date > td && e.date <= end).map(e => { const l = entryLine(e); return {date:e.date, label:l.title, sub:"Logged entry", txt:l.amt}; }))
